@@ -9,6 +9,7 @@ environment:
 # Add regular dependencies here.
 dependencies:
   args: ^2.4.2
+  fpdart: ^1.1.0
   ioc_container: ^1.0.12
   path: ^1.8.3
 
