@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:path/path.dart' as path;
+import 'package:fpdart/fpdart.dart';
+import 'package:novenio/constants.dart';
 import 'package:system_info2/system_info2.dart';
 import 'package:novenio/common.dart';
 
@@ -16,4 +20,11 @@ import 'package:novenio/common.dart';
       throw Exception('Unknown architecture: ${SysInfo.rawKernelArchitecture}'),
   };
   return (os, arch);
+}
+
+String getNovenioDir() {
+  return Platform.environment.extract<String>(novenioHome).match(() {
+    final String? appDataDir = Platform.environment['APPDATA'];
+    return path.join(appDataDir ?? SysInfo.userDirectory, '.novenio');
+  }, (t) => t);
 }
