@@ -15,11 +15,20 @@ extension InstallTypeExtensions on InstallType {
       };
 }
 
-extension CurrentOsExtensions on CurrentOS {
+extension CurrentOsExtensions on OSKind {
   String get asString => switch (this) {
         Linux() => "linux",
         MacOs() => "darwin",
         Windows() => "win",
+      };
+}
+
+extension CurrentArchExtensions on ArchitectureKind {
+  String get asString => switch (this) {
+        Arm() => "armv7l",
+        Arm64() => "arm64",
+        X86() => "x86",
+        X64() => "x64",
       };
 }
 
@@ -65,4 +74,10 @@ extension ExtractVersionItem on List<NodeVerItem> {
         tryExtractVersion(this, major, minor, patch),
     };
   }
+}
+
+String getVersionDirName(OSKind os, ArchitectureKind arch, String version) {
+  final fOs = os.asString;
+  final fArch = arch.asString;
+  return "node-$version-$fOs-$fArch";
 }

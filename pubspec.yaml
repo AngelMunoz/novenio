@@ -12,6 +12,7 @@ dependencies:
   fpdart: ^1.1.0
   ioc_container: ^1.0.12
   path: ^1.8.3
+  system_info2: ^4.0.0
 
 dev_dependencies:
   lints: ^3.0.0

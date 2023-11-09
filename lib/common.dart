@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 class NodeVerItem {
   final String version;
@@ -74,16 +75,28 @@ class SpecificMMP extends InstallType {
   SpecificMMP(this.major, this.minor, this.patch);
 }
 
-sealed class CurrentOS {}
+sealed class OSKind {}
 
-class Linux extends CurrentOS {}
+class Linux extends OSKind {}
 
-class MacOs extends CurrentOS {}
+class MacOs extends OSKind {}
 
-class Windows extends CurrentOS {}
+class Windows extends OSKind {}
+
+sealed class ArchitectureKind {}
+
+class Arm extends ArchitectureKind {}
+
+class Arm64 extends ArchitectureKind {}
+
+class X86 extends ArchitectureKind {}
+
+class X64 extends ArchitectureKind {}
 
 String getVersionCodename(String version) => "${version.split('.')[0]}.x";
+
 String getLtsCodename(String version) => version.toLowerCase();
+
 String getCodename(NodeVerItem version) {
   final defVersion = getVersionCodename(version.version);
   final defLts = getLtsCodename(version.version);
