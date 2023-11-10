@@ -78,3 +78,27 @@ Future<void> removeSymlink(String target) async {
   final link = Link(target);
   await link.delete(recursive: true);
 }
+
+abstract class BashEditor {
+  final File profile;
+
+  BashEditor(this.profile);
+
+  Future<bool> findOrExportNovenio();
+}
+
+abstract class NovFs {
+  Future<Uri> linkNode(String version);
+
+  Future<Uri> updateLink(String version);
+
+  Future<Iterable<Directory>> enumerateLocalNodes();
+
+  Future<Directory> extractFromArchive(File archive, String target);
+}
+
+abstract class NovHttp {
+  Future<File> downloadList(String writeTo);
+
+  Future<File> downloadNode(String version, OSKind os, ArchitectureKind arch);
+}
