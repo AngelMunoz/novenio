@@ -1,4 +1,69 @@
+import 'package:logging/logging.dart';
 import 'package:novenio/common.dart';
+
+Level levelOfString(String level) {
+  switch (level) {
+    case 'info':
+      return Level.INFO;
+    case 'debug':
+      return Level.FINE;
+    case 'verbose':
+      return Level.FINER;
+    case 'trace':
+      return Level.FINEST;
+    case 'warning':
+      return Level.WARNING;
+    case 'error':
+      return Level.SEVERE;
+    case 'fatal':
+      return Level.SHOUT;
+    case 'all':
+      return Level.ALL;
+    case 'off':
+      return Level.OFF;
+    default:
+      return Level.INFO;
+  }
+}
+
+extension LoggerLevelExtensions on Level {
+  String get asString => switch (this) {
+        Level.FINEST || Level.ALL => "TRA",
+        Level.FINER => "VER",
+        Level.FINE => "DEB",
+        Level.CONFIG || Level.INFO => "INF",
+        Level.WARNING => "WAR",
+        Level.SEVERE => "ERR",
+        Level.SHOUT => "FAT",
+        _ => "OFF",
+      };
+}
+
+extension LoggerExtensions on Logger {
+  void error(Object? message, [Object? error, StackTrace? stackTrace]) {
+    log(Level.SEVERE, message, error, stackTrace);
+  }
+
+  void warn(Object? message, [Object? error, StackTrace? stackTrace]) {
+    log(Level.WARNING, message, error, stackTrace);
+  }
+
+  void fatal(Object? message, [Object? error, StackTrace? stackTrace]) {
+    log(Level.SHOUT, message, error, stackTrace);
+  }
+
+  void debug(Object? message, [Object? error, StackTrace? stackTrace]) {
+    log(Level.FINE, message, error, stackTrace);
+  }
+
+  void trace(Object? message, [Object? error, StackTrace? stackTrace]) {
+    log(Level.FINEST, message, error, stackTrace);
+  }
+
+  void verbose(Object? message, [Object? error, StackTrace? stackTrace]) {
+    log(Level.FINER, message, error, stackTrace);
+  }
+}
 
 extension InstallTypeExtensions on InstallType {
   String get asString => switch (this) {
