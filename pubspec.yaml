@@ -1,7 +1,7 @@
 name: novenio
 description: A sample command-line application.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/AngelMunoz/novenio
 
 environment:
   sdk: ^3.1.5
@@ -11,6 +11,7 @@ dependencies:
   args: ^2.4.2
   fpdart: ^1.1.0
   ioc_container: ^1.0.12
+  logging: ^1.2.0
   path: ^1.8.3
   system_info2: ^4.0.0
 
