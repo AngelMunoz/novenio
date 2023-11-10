@@ -4,20 +4,33 @@ import 'package:logging/logging.dart';
 import 'package:novenio/extensions.dart';
 import 'types.dart';
 
-class InstallCommand extends Command<CommandResult> {
+abstract class NovenioCommand<T> extends Command<T> {
+  late final Logger logger;
+  late final void Function(Level level) _setLogLevel;
+  NovenioCommand(IocContainer container) {
+    logger = container.get();
+    _setLogLevel = container.get();
+  }
+
+  @override
+  run() {
+    final String? logLevel = globalResults?['log-level'];
+
+    if (logLevel != null && logLevel.isNotEmpty) {
+      _setLogLevel(levelOfString(logLevel));
+    }
+    return null;
+  }
+}
+
+class InstallCommand extends NovenioCommand<CommandResult> {
   @override
   String get description => "Installs the specified node version";
 
   @override
   String get name => "install";
 
-  late final Logger _logger;
-  late final void Function(Level level) setLogLevel;
-
-  InstallCommand(IocContainer container) {
-    _logger = container.get();
-    setLogLevel = container.get();
-
+  InstallCommand(super.container) {
     argParser
       ..addOption("version",
           abbr: 'v',
@@ -35,50 +48,131 @@ class InstallCommand extends Command<CommandResult> {
   }
 
   @override
-  Future<InstallVersion> run() async {
-    final String? logLevel = globalResults?['log-level'];
-
-    if (logLevel != null && logLevel.isNotEmpty) {
-      setLogLevel(levelOfString(logLevel));
-    }
+  Future<CommandResult> run() async {
+    super.run();
 
     final InstallArgs cmdArgs = InstallArgs(
         argResults!['lts'], argResults!['default'], argResults?['version']);
-    _logger.debug("Installing node with args: ${cmdArgs}");
+    logger.debug("Installing node with args: ${cmdArgs}");
 
-    return InstallVersion();
+    return CommandSuccess();
   }
 }
 
-class UninstallCommand extends Command<CommandResult> {
+class RemoveNodeCommand extends NovenioCommand<CommandResult> {
   @override
-  String get description => "Uninstalls the specified node version";
+  String get description => "Remvoes the specified node version";
 
   @override
   // TODO: implement name
-  String get name => "uninstall";
+  String get name => "remove";
+
+  RemoveNodeCommand(super.container) {
+    argParser.addOption("version",
+        abbr: 'v', help: "Remove the specified node version", mandatory: true);
+  }
+
+  @override
+  Future<CommandResult> run() async {
+    super.run();
+
+    final args = RemoveNodeArgs(argResults!['version']);
+
+    logger.debug("Removing node with args: $args");
+
+    return CommandSuccess();
+  }
 }
 
-class UseCommand extends Command<CommandResult> {
+class UseCommand extends NovenioCommand<CommandResult> {
   @override
   String get description => "Sets the specified node version as default";
 
   @override
   String get name => "use";
+
+  UseCommand(super.container) {
+    argParser
+      ..addOption("version",
+          abbr: 'v', help: "Use the specified node version", mandatory: true)
+      ..addOption("import-from",
+          help: "Import packages from the specified node version");
+  }
+
+  @override
+  Future<CommandResult> run() async {
+    super.run();
+
+    final UseArgs args =
+        UseArgs(argResults!['version'], argResults!['import-from']);
+
+    logger.debug("Using node with args: $args");
+
+    return CommandSuccess();
+  }
 }
 
-class ListCommand extends Command<CommandResult> {
+class ListCommand extends NovenioCommand<CommandResult> {
   @override
   String get description => "Lists all installed node versions";
 
   @override
   String get name => "list";
+
+  ListCommand(super.container) {
+    argParser
+      ..addFlag("remote",
+          abbr: 'r',
+          help: "List all available node versions",
+          negatable: false,
+          defaultsTo: false)
+      ..addFlag("update",
+          abbr: 'u',
+          help: "Update the list of available node versions",
+          negatable: false,
+          defaultsTo: false);
+  }
+
+  @override
+  Future<CommandResult> run() async {
+    super.run();
+
+    final ListArgs args =
+        ListArgs(argResults!['remote'], argResults!['update']);
+
+    logger.debug("Listing node with args: $args");
+
+    return CommandSuccess();
+  }
 }
 
-class ImportFromVersionCommand extends Command<CommandResult> {
+class ImportFromVersionCommand extends NovenioCommand<CommandResult> {
   @override
   String get description => "Imports node packages from the specified version";
 
   @override
   String get name => "import";
+
+  ImportFromVersionCommand(super.container) {
+    argParser
+      ..addOption("from",
+          abbr: 'f',
+          help: "Import packages from the specified node version",
+          mandatory: true)
+      ..addOption("to",
+          abbr: 't',
+          help: "Import packages to the specified node version",
+          mandatory: true);
+  }
+
+  @override
+  Future<CommandResult> run() async {
+    super.run();
+
+    final ImportArgs args = ImportArgs(argResults!['from'], argResults!['to']);
+
+    logger.debug("Importing node with args: $args");
+
+    return CommandSuccess();
+  }
 }
