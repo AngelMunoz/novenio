@@ -15,7 +15,7 @@ void configureRootLogger([String? level]) {
     final stackTrace = record.stackTrace != null ? " ${record.stackTrace}" : "";
 
     print(
-        '[${record.time.toIso8601String()} ${record.level.asString}]: ${record.loggerName} ${record.message}$frecord$stackTrace');
+        '[${record.time.toIso8601String()} ${record.level.asString}] ${record.loggerName}: ${record.message}$frecord$stackTrace');
   });
 }
 
@@ -45,30 +45,31 @@ Future<void> main(List<String> arguments) async {
       'info',
     ])
     ..addCommand(InstallCommand(container))
-    ..addCommand(UninstallCommand())
-    ..addCommand(UseCommand())
-    ..addCommand(ListCommand())
-    ..addCommand(ImportFromVersionCommand());
+    ..addCommand(RemoveNodeCommand(container))
+    ..addCommand(UseCommand(container))
+    ..addCommand(ListCommand(container))
+    ..addCommand(ImportFromVersionCommand(container));
 
-  final result = await runner.run(arguments);
+  late final result;
+  try {
+    result = await runner.run(arguments);
+  } on UsageException {
+    runner.printUsage();
+    exit(1);
+  } on ArgumentError {
+    runner.printUsage();
+    exit(1);
+  }
 
   switch (result) {
-    case InstallVersion():
-      print("Install");
+    case CommandSuccess():
       break;
-    case UninstallVersion():
-      print("Uninstall");
-      break;
-    case Version():
-      print("Use");
-      break;
-    case ListVersions():
-      print("List");
-      break;
-    case ImportVersion():
-      print("Import");
-      break;
+    case CommandFailure(message: final message):
+      Logger.root.error(message);
+      exit(1);
     default:
-      print("Unknown command");
+      Logger.root.error("Unknown error");
+      exit(1);
   }
+  exit(0);
 }
