@@ -144,5 +144,6 @@ extension ExtractVersionItem on List<NodeVerItem> {
 String getVersionDirName(OSKind os, ArchitectureKind arch, String version) {
   final fOs = os.asString;
   final fArch = arch.asString;
-  return "node-$version-$fOs-$fArch";
+  final fVersion = version.startsWith('v') ? version : 'v$version';
+  return "node-$fVersion-$fOs-$fArch";
 }
