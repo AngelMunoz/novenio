@@ -1,4 +1,24 @@
-import 'dart:convert';
+
+NodeVerItem nodeVersionFromDynamic(dynamic decoded) {
+  var lts = decoded['lts'];
+  if (lts is bool) {
+    lts = null;
+  }
+
+  return NodeVerItem(
+    version: decoded['version'],
+    date: decoded['date'],
+    files: List<String>.from(decoded['files']),
+    npm: decoded['npm'],
+    v8: decoded['v8'],
+    uv: decoded['uv'],
+    zlib: decoded['zlib'],
+    openssl: decoded['openssl'],
+    modules: decoded['modules'],
+    lts: lts,
+    security: decoded['security'],
+  );
+}
 
 class NodeVerItem {
   final String version;
@@ -27,26 +47,21 @@ class NodeVerItem {
     this.security,
   });
 
-  static decode(String str) {
-    final decoded = json.decode(str);
-    var lts = decoded['lts'];
-    if (lts is bool) {
-      lts = null;
-    }
-
-    return NodeVerItem(
-      version: decoded['version'],
-      date: decoded['date'],
-      files: List<String>.from(decoded['files']),
-      npm: decoded['npm'],
-      v8: decoded['v8'],
-      uv: decoded['uv'],
-      zlib: decoded['zlib'],
-      openssl: decoded['openssl'],
-      modules: decoded['modules'],
-      lts: lts,
-      security: decoded['security'],
-    );
+  @override
+  String toString() {
+    return """NodeVerItem{
+  version: $version,
+  date: $date,
+  files: $files,
+  npm: $npm,
+  v8: $v8,
+  uv: $uv,
+  zlib: $zlib,
+  openssl: $openssl,
+  moadules: $modules,
+  lts: $lts,
+  security: $security
+}""";
   }
 }
 
