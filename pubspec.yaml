@@ -8,8 +8,10 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  archive: ^3.4.9
   args: ^2.4.2
   fpdart: ^1.1.0
+  http: ^1.1.0
   ioc_container: ^1.0.12
   logging: ^1.2.0
   path: ^1.8.3
