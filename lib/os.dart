@@ -2,8 +2,9 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:fpdart/fpdart.dart';
-import 'package:novenio/constants.dart';
 import 'package:system_info2/system_info2.dart';
+import 'package:archive/archive_io.dart';
+import 'package:novenio/constants.dart';
 import 'package:novenio/common.dart';
 
 class CreateJunctionException extends IOException {
@@ -77,6 +78,21 @@ createSymlinkOrJunction(String path, String target) async {
 Future<void> removeSymlink(String target) async {
   final link = Link(target);
   await link.delete(recursive: true);
+}
+
+Future<Directory> extractFile(File tmpFile, String target) async {
+  if (Platform.isWindows) {
+    final input = InputFileStream(tmpFile.path);
+    final zip = ZipDecoder().decodeBuffer(input);
+    await extractArchiveToDiskAsync(zip, target);
+  } else {
+    final input = InputStream(tmpFile.path);
+    final gzip = GZipDecoder().decodeBuffer(input);
+    final archive = TarDecoder().decodeBytes(gzip);
+
+    await extractArchiveToDiskAsync(archive, target);
+  }
+  return Directory(target);
 }
 
 abstract class BashEditor {
