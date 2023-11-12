@@ -1,28 +1,8 @@
-
-NodeVerItem nodeVersionFromDynamic(dynamic decoded) {
-  var lts = decoded['lts'];
-  if (lts is bool) {
-    lts = null;
-  }
-
-  return NodeVerItem(
-    version: decoded['version'],
-    date: decoded['date'],
-    files: List<String>.from(decoded['files']),
-    npm: decoded['npm'],
-    v8: decoded['v8'],
-    uv: decoded['uv'],
-    zlib: decoded['zlib'],
-    openssl: decoded['openssl'],
-    modules: decoded['modules'],
-    lts: lts,
-    security: decoded['security'],
-  );
-}
+import 'package:fpdart/fpdart.dart';
 
 class NodeVerItem {
   final String version;
-  final String date;
+  final DateTime date;
   final List<String> files;
   final String? npm;
   final String? v8;
@@ -115,4 +95,62 @@ String getCodename(NodeVerItem version) {
   final defVersion = getVersionCodename(version.version);
   final defLts = getLtsCodename(version.version);
   return version.lts == null ? defLts : defVersion;
+}
+
+NodeVerItem nodeVersionFromDynamic(dynamic decoded) {
+  var lts = decoded['lts'];
+  var date = decoded['date'];
+  if (lts is bool) {
+    lts = null;
+  }
+
+  if (date is String) {
+    date = DateTime.parse(date);
+  }
+
+  return NodeVerItem(
+    version: decoded['version'],
+    date: date,
+    files: List<String>.from(decoded['files']),
+    npm: decoded['npm'],
+    v8: decoded['v8'],
+    uv: decoded['uv'],
+    zlib: decoded['zlib'],
+    openssl: decoded['openssl'],
+    modules: decoded['modules'],
+    lts: lts,
+    security: decoded['security'],
+  );
+}
+
+final RegExp _versionRegex = RegExp(
+    r'^v?(?<major>\d{1,2})(\.(?<minor>[x\d]{1,2}))?(\.(?<patch>[x\d]{1,2}))?$');
+
+NodeVerItem? getNodeVersion(
+    String versionOrCodename, List<NodeVerItem> versions) {
+  final match = _versionRegex.firstMatch(versionOrCodename);
+  // no match means the user tried a codename e.g. carbon/argon
+  if (match == null) {
+    return versions
+        .filter((t) => t.lts?.toLowerCase() == versionOrCodename.toLowerCase())
+        .firstOrNull;
+  }
+  final major = int.tryParse(match.namedGroup("major") ?? "");
+  final minor = int.tryParse(match.namedGroup("minor") ?? "");
+  final patch = int.tryParse(match.namedGroup("patch") ?? "");
+  final version = switch ((major, minor, patch)) {
+    // latest major
+    (int major, null, null) => "v$major.",
+    // minor with latest patch
+    (int major, int minor, null) => "v$major.$minor.",
+    // specific version
+    (int major, int minor, int patch) => "v$major.$minor.$patch",
+    _ => null,
+  };
+
+  if (version == null) {
+    return null;
+  }
+
+  return versions.filter((t) => t.version.startsWith(version)).firstOrNull;
 }
