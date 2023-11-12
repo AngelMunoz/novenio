@@ -80,41 +80,17 @@ Future<void> removeSymlink(String target) async {
   await link.delete(recursive: true);
 }
 
-Future<Directory> extractFile(File tmpFile, String target) async {
+Future<Directory> extractFile(String compressedFilePath, String target) async {
   if (Platform.isWindows) {
-    final input = InputFileStream(tmpFile.path);
+    final input = InputFileStream(compressedFilePath);
     final zip = ZipDecoder().decodeBuffer(input);
     await extractArchiveToDiskAsync(zip, target);
   } else {
-    final input = InputStream(tmpFile.path);
+    final input = InputStream(compressedFilePath);
     final gzip = GZipDecoder().decodeBuffer(input);
     final archive = TarDecoder().decodeBytes(gzip);
 
     await extractArchiveToDiskAsync(archive, target);
   }
   return Directory(target);
-}
-
-abstract class BashEditor {
-  final File profile;
-
-  BashEditor(this.profile);
-
-  Future<bool> findOrExportNovenio();
-}
-
-abstract class NovFs {
-  Future<Uri> linkNode(String version);
-
-  Future<Uri> updateLink(String version);
-
-  Future<Iterable<Directory>> enumerateLocalNodes();
-
-  Future<Directory> extractFromArchive(File archive, String target);
-}
-
-abstract class NovHttp {
-  Future<File> downloadList(String writeTo);
-
-  Future<File> downloadNode(String version, OSKind os, ArchitectureKind arch);
 }
