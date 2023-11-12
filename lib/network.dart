@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fpdart/fpdart.dart';
 import 'package:http/http.dart' as http;
 import 'package:novenio/common.dart';
 import 'package:novenio/constants.dart' as constants;
@@ -13,7 +14,9 @@ Future<List<NodeVerItem>?> fetchNodeIndex() async {
     return null;
   }
   final List<dynamic> items = jsonDecode(utf8.decode(response.bodyBytes));
-  final decoded = items.map((item) => nodeVersionFromDynamic(item));
+  final decoded = items
+      .map(nodeVersionFromDynamic)
+      .sortWith((t) => t.date, Order.orderDate.reverse);
   return decoded.toList();
 }
 
