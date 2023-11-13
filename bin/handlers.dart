@@ -57,6 +57,12 @@ Future<CommandResult> runInstall(Logger logger, InstallArgs args) async {
 
   logger.debug("Extracted node version at: ${extracted.path}");
 
+  try {
+    await removeCompressedFile(compressed);
+  } catch (error) {
+    logger.warning("Failed to delete '${compressed.path}'", error);
+  }
+
   if (args.setDefault) {
     logger.info("Setting node ${version.version} as default");
     final linkUri = await setCurrentNode(logger, version);
