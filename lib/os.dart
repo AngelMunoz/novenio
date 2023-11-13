@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:novenio/extensions.dart';
@@ -41,8 +40,11 @@ class CreateJunctionException extends IOException {
 
 String getNovenioDir() {
   return Platform.environment.extract<String>(novenioHome).match(() {
-    final String? appDataDir = Platform.environment['APPDATA'];
-    return path.join(appDataDir ?? SysInfo.userDirectory, '.novenio');
+    final String novenioParentDir =
+        Platform.environment['APPDATA'] ?? SysInfo.userDirectory;
+    final String novenioName = Platform.isWindows ? 'novenio' : '.novenio';
+
+    return path.join(novenioParentDir, novenioName);
   }, (t) => t);
 }
 
@@ -101,36 +103,49 @@ Future<void> removeSymlink(String target) async {
   await link.delete(recursive: true);
 }
 
-Future<Directory> extractFile(String compressedFilePath, String version) async {
-  final uncompressedTarget = getNovenioDir();
-  final nestedUncompressedFilePath = path.basename(
-      compressedFilePath.replaceAll('.tar.gz', '').replaceAll('.zip', ''));
+Future<void> _moveDirectory(source, target) async {
+  if (Platform.isWindows) {
+    await Process.run("powershell.exe",
+        ["-Command", "Move-Item", "-Path", source, "-Destination", target]);
+  } else {
+    await Directory(source).rename(target);
+  }
+}
+
+Future<Directory> extractFile(String archivePath, String version) async {
+  final novenioDir = getNovenioDir();
+  // Name of the extracted zip/tar.gz directory e.g. node-v14.17.0-linux-x64/node-v14.17.0-win-x64
+  final afterExtractionName = path
+      .basename(archivePath.replaceAll('.tar.gz', '').replaceAll('.zip', ''));
 
   try {
-    await Directory(path.join(uncompressedTarget, version))
-        .delete(recursive: true);
+    await Directory(path.join(novenioDir, version)).delete(recursive: true);
   } on PathNotFoundException {
     // ignore
   }
 
   if (Platform.isWindows) {
-    final input = InputFileStream(compressedFilePath);
+    final input = InputFileStream(archivePath);
     final zip = ZipDecoder().decodeBuffer(input);
-    await extractArchiveToDiskAsync(zip, uncompressedTarget);
+    await extractArchiveToDiskAsync(zip, novenioDir);
   } else {
-    final input = InputFileStream(compressedFilePath);
+    final input = InputFileStream(archivePath);
     final gzip = GZipDecoder().decodeBuffer(input);
     final archive = TarDecoder().decodeBytes(gzip);
 
-    await extractArchiveToDiskAsync(archive, uncompressedTarget);
+    await extractArchiveToDiskAsync(archive, novenioDir);
   }
 
-  final uncompressedDir =
-      path.join(uncompressedTarget, nestedUncompressedFilePath);
-  final normalizedUncompressedDir = path.join(uncompressedTarget, version);
+  // After the archive has been extracted this is where it will reside.
+  final afterExtractionPath = path.join(novenioDir, afterExtractionName);
 
-  await Directory(uncompressedDir).rename(normalizedUncompressedDir);
-  return Directory(uncompressedTarget);
+  // Name of the versioned directory e.g. v14.17.0
+  final versionedPath = path.join(novenioDir, version);
+
+  // After the archive has been extracted we'll want to move it to match the node version it contains.
+  await _moveDirectory(afterExtractionPath, versionedPath);
+
+  return Directory(versionedPath);
 }
 
 Future<File> saveIndexToDisk(List<NodeVerItem> index) async {
@@ -141,4 +156,58 @@ Future<File> saveIndexToDisk(List<NodeVerItem> index) async {
 
   final indexFile = File(path.join(dir, 'index.json'));
   return await indexFile.writeAsString(jsonEncode(content));
+}
+
+Future<void> _setEnvVarWin(String name, String value) async {
+  final process = await Process.run("powershell.exe", [
+    "-Command",
+    "[Environment]::SetEnvironmentVariable('$name', '$value', 'USER')"
+  ]);
+
+  if (process.exitCode != 0) {
+    throw Exception("Failed to set env var: ${process.stderr}");
+  }
+}
+
+Future<void> _setEnvVarUnixLike(String name, String value) async {
+  final profileName = Platform.isMacOS ? '.zprofile' : '.profile';
+  final profileFile = path.join(SysInfo.userDirectory, profileName);
+  final contents = "\nexport $name=$value\n";
+  await File(profileFile).writeAsString(contents, mode: FileMode.append);
+}
+
+Future<void> setEnvVars(Logger logger) async {
+  final novenioDir = getNovenioDir();
+
+  if (Platform.isWindows) {
+    await _setEnvVarWin(novenioHome, novenioDir);
+    logger.debug("Set $novenioHome to $novenioDir");
+    final novenioNodeDir = path.join(novenioDir, 'current');
+    await _setEnvVarWin(novenioNode, novenioNodeDir);
+
+    logger.debug("Set $novenioDir to $novenioNodeDir");
+
+    logger.info(
+        "Set $novenioHome and $novenioNode environment variables to the current user.");
+    logger.info(
+        "Please note that you have to manually add NOVENIO_NODE to your PATH environment");
+    logger.info("You can do so by opening 'SystemPropertiesAdvanced.exe'");
+    logger.info(
+        "Click on the 'Environment Variables...' button and add '%$novenioNode%' to you user's PATH");
+  } else {
+    await _setEnvVarUnixLike(novenioHome, novenioDir);
+    logger.debug("Set $novenioHome to $novenioDir");
+    final novenioNodeDir = path.join(novenioDir, 'current');
+    await _setEnvVarUnixLike(novenioNode, path.join(novenioDir, 'current'));
+    logger.debug("Set $novenioDir to $novenioNodeDir");
+    logger.info("Set $novenioHome and $novenioNode environment variables");
+    logger.info(
+        "Please note that you have to manually add '\$$novenioNode' to your \$PATH environment");
+    logger.info(
+        "You can do so by opening your shell's profile file and adding the following line:");
+    logger.info("export PATH=\$PATH:\$$novenioNode");
+  }
+
+  logger.info(
+      "Close your current terminal or log out/log in for it to make effect.");
 }
