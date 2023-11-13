@@ -1,7 +1,11 @@
 import 'package:args/command_runner.dart';
 import 'package:ioc_container/ioc_container.dart';
 import 'package:logging/logging.dart';
+
+import 'package:novenio/common.dart';
 import 'package:novenio/extensions.dart';
+
+import 'handlers.dart' as handlers;
 import 'types.dart';
 
 abstract class NovenioCommand<T> extends Command<T> {
@@ -53,9 +57,8 @@ class InstallCommand extends NovenioCommand<CommandResult> {
 
     final InstallArgs cmdArgs = InstallArgs(
         argResults!['lts'], argResults!['default'], argResults?['version']);
-    logger.debug("Installing node with args: ${cmdArgs}");
 
-    return CommandSuccess();
+    return handlers.runInstall(logger, cmdArgs);
   }
 }
 
