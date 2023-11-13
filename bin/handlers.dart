@@ -1,4 +1,5 @@
-import 'package:fpdart/fpdart.dart';
+import 'dart:io';
+
 import 'package:logging/logging.dart';
 import 'package:novenio/common.dart';
 import 'package:novenio/extensions.dart';
@@ -12,14 +13,16 @@ Future<CommandResult> runInstall(Logger logger, InstallArgs args) async {
 
   logger.info("Fetching node versions...");
 
+  final (os, arch) = getOsAndArch();
+  logger
+      .debug("Detected OS: ${os.asString} and Architecture: ${arch.asString}");
+
   final versions = await getNodeVersions(logger, true);
   logger.debug("Fetched '${versions.length}' versions");
 
   final index = await saveIndexToDisk(versions);
   logger.info("Saved node index at: ${index.path}");
 
-  final (os, arch) = getOsAndArch();
-  logger.debug("Detected OS: $os and Architecture: $arch");
   late final NodeVerItem? version;
 
   if (args.custom != null) {
@@ -58,6 +61,10 @@ Future<CommandResult> runInstall(Logger logger, InstallArgs args) async {
     logger.info("Setting node ${version.version} as default");
     final linkUri = await setCurrentNode(logger, version);
     logger.debug("Set node ${version.version} as default at: ${linkUri.path}");
+    if (Platform.environment['NOVENIO_HOME'] == null) {
+      logger.info("Setting up Novenio's environment variables");
+      await setEnvVars(logger);
+    }
   }
 
   return CommandSuccess();
