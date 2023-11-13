@@ -48,7 +48,7 @@ class InstallCommand extends NovenioCommand<CommandResult> {
           abbr: 'd',
           help: "Install the specified node version as default",
           negatable: false,
-          defaultsTo: true);
+          defaultsTo: false);
   }
 
   @override
@@ -58,7 +58,12 @@ class InstallCommand extends NovenioCommand<CommandResult> {
     final InstallArgs cmdArgs = InstallArgs(
         argResults!['lts'], argResults!['default'], argResults?['version']);
 
-    return handlers.runInstall(logger, cmdArgs);
+    try {
+      return handlers.runInstall(logger, cmdArgs);
+    } catch (ex) {
+      logger.error("Failed to install node version", ex);
+      return CommandFailure("Failed to install node version");
+    }
   }
 }
 
