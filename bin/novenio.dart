@@ -52,7 +52,7 @@ Future<void> main(List<String> arguments) async {
     ..addCommand(ListCommand(container))
     ..addCommand(ImportFromVersionCommand(container));
 
-  late final result;
+  late final CommandResult? result;
   try {
     result = await runner.run(arguments);
   } on UsageException {
