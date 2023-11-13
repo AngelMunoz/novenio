@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:logging/logging.dart';
 
 class NodeVerItem {
   final String version;
@@ -45,30 +46,6 @@ class NodeVerItem {
   }
 }
 
-sealed class InstallType {}
-
-class Lts extends InstallType {}
-
-class Current extends InstallType {}
-
-class SpecificM extends InstallType {
-  final String major;
-  SpecificM(this.major);
-}
-
-class SpecificMM extends InstallType {
-  final String major;
-  final String minor;
-  SpecificMM(this.major, this.minor);
-}
-
-class SpecificMMP extends InstallType {
-  final String major;
-  final String minor;
-  final String patch;
-  SpecificMMP(this.major, this.minor, this.patch);
-}
-
 sealed class OSKind {}
 
 class Linux extends OSKind {}
@@ -87,14 +64,13 @@ class X86 extends ArchitectureKind {}
 
 class X64 extends ArchitectureKind {}
 
-String getVersionCodename(String version) => "${version.split('.')[0]}.x";
+String _dateToString(DateTime date) {
+  final year = date.year;
+  String month = '${date.month}'.padLeft(2, '0');
 
-String getLtsCodename(String version) => version.toLowerCase();
+  String day = '${date.day}'.padLeft(2, '0');
 
-String getCodename(NodeVerItem version) {
-  final defVersion = getVersionCodename(version.version);
-  final defLts = getLtsCodename(version.version);
-  return version.lts == null ? defLts : defVersion;
+  return "$year-$month-$day";
 }
 
 NodeVerItem nodeVersionFromDynamic(dynamic decoded) {
@@ -121,6 +97,22 @@ NodeVerItem nodeVersionFromDynamic(dynamic decoded) {
     lts: lts,
     security: decoded['security'],
   );
+}
+
+Map<String, dynamic> nodeVersionToMap(NodeVerItem item) {
+  return {
+    'version': item.version,
+    'date': _dateToString(item.date),
+    'files': item.files,
+    'npm': item.npm,
+    'v8': item.v8,
+    'uv': item.uv,
+    'zlib': item.zlib,
+    'openssl': item.openssl,
+    'modules': item.modules,
+    'lts': item.lts,
+    'security': item.security,
+  };
 }
 
 final RegExp _versionRegex = RegExp(
@@ -153,4 +145,29 @@ NodeVerItem? getNodeVersion(
   }
 
   return versions.filter((t) => t.version.startsWith(version)).firstOrNull;
+}
+
+Level levelOfString(String level) {
+  switch (level) {
+    case 'info':
+      return Level.INFO;
+    case 'debug':
+      return Level.FINE;
+    case 'verbose':
+      return Level.FINER;
+    case 'trace':
+      return Level.FINEST;
+    case 'warning':
+      return Level.WARNING;
+    case 'error':
+      return Level.SEVERE;
+    case 'fatal':
+      return Level.SHOUT;
+    case 'all':
+      return Level.ALL;
+    case 'off':
+      return Level.OFF;
+    default:
+      return Level.INFO;
+  }
 }
