@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import 'package:novenio/common.dart';
 import 'package:novenio/constants.dart' as constants;
 import 'package:novenio/extensions.dart';
@@ -32,7 +33,8 @@ Future<File?> fetchNode(
     return null;
   }
   final tmpDir = Directory.systemTemp;
-  final File file = File('${tmpDir.path}/$nodeItem.$extension');
+
+  final File file = File(path.join(tmpDir.path, "$nodeItem.$extension"));
 
   return await file.writeAsBytes(response.bodyBytes);
 }
