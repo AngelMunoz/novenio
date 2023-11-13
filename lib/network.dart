@@ -31,6 +31,8 @@ Future<File?> fetchNode(
   if (response.statusCode case (>= 400)) {
     return null;
   }
-  final File file = File(Platform.environment['TMPDIR'] ?? '/tmp');
+  final tmpDir = Directory.systemTemp;
+  final File file = File('${tmpDir.path}/$nodeItem.$extension');
+
   return await file.writeAsBytes(response.bodyBytes);
 }
