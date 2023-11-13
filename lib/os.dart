@@ -81,6 +81,7 @@ Future<void> makeExecutable(String path) async {
 Future<Uri> createSymlinkOrJunction(
     Logger logger, String path, String target) async {
   try {
+    logger.debug("Creating symlink from: $path to: $target");
     final link = await Link(target).create(path, recursive: true);
 
     return link.uri;
@@ -112,16 +113,21 @@ Future<void> removeCompressedFile(File compressed) async {
   }
 }
 
-Future<void> _moveDirectory(source, target) async {
+Future<void> _moveDirectory(Logger logger, source, target) async {
   if (Platform.isWindows) {
-    await Process.run("powershell.exe",
+    final result = await Process.run("powershell.exe",
         ["-Command", "Move-Item", "-Path", source, "-Destination", target]);
+    logger.trace(result.stdout);
+    if (result.exitCode != 0) {
+      logger.trace(result.stderr);
+    }
   } else {
     await Directory(source).rename(target);
   }
 }
 
-Future<Directory> extractFile(String archivePath, String version) async {
+Future<Directory> extractFile(
+    Logger logger, String archivePath, String version) async {
   final novenioDir = getNovenioDir();
   // Name of the extracted zip/tar.gz directory e.g. node-v14.17.0-linux-x64/node-v14.17.0-win-x64
   final afterExtractionName = path
@@ -129,8 +135,9 @@ Future<Directory> extractFile(String archivePath, String version) async {
 
   try {
     await Directory(path.join(novenioDir, version)).delete(recursive: true);
-  } on PathNotFoundException {
+  } on PathNotFoundException catch (ex) {
     // ignore
+    logger.trace("No directory found at: ${ex.path}, not failing.", ex);
   }
 
   if (Platform.isWindows) {
@@ -152,7 +159,7 @@ Future<Directory> extractFile(String archivePath, String version) async {
   final versionedPath = path.join(novenioDir, version);
 
   // After the archive has been extracted we'll want to move it to match the node version it contains.
-  await _moveDirectory(afterExtractionPath, versionedPath);
+  await _moveDirectory(logger, afterExtractionPath, versionedPath);
 
   return Directory(versionedPath);
 }
