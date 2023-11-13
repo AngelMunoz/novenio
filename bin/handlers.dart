@@ -53,7 +53,7 @@ Future<CommandResult> runInstall(Logger logger, InstallArgs args) async {
 
   logger.debug("Fetched node version at: ${compressed.path}");
 
-  final extracted = await extractFile(compressed.path, version.version);
+  final extracted = await extractFile(logger, compressed.path, version.version);
 
   logger.debug("Extracted node version at: ${extracted.path}");
 
