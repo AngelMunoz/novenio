@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:logging/logging.dart';
+import 'package:novenio/extensions.dart';
 import 'package:path/path.dart' as path;
 import 'package:fpdart/fpdart.dart';
 import 'package:system_info2/system_info2.dart';
@@ -43,6 +46,21 @@ String getNovenioDir() {
   }, (t) => t);
 }
 
+Future<List<NodeVerItem>?> fetchNodeIndexFromDisk() async {
+  try {
+    final indexFile = File(path.join(getNovenioDir(), 'index.json'));
+    final index = await indexFile.readAsBytes();
+    final List<dynamic> items = jsonDecode(utf8.decode(index));
+    final decoded = items
+        .map(nodeVersionFromDynamic)
+        .sortWith((t) => t.date, Order.orderDate.reverse);
+
+    return decoded.toList();
+  } on FileSystemException {
+    return null;
+  }
+}
+
 Future<void> _createJunction(String path, String target) async {
   final process = await Process.run("mklink.exe", ["/J", path, target]);
   if (process.exitCode != 0) {
@@ -52,24 +70,27 @@ Future<void> _createJunction(String path, String target) async {
 }
 
 Future<void> makeExecutable(String path) async {
-  final process = await Process.run("chmod", ["+x", path]);
+  final process = await Process.run("chmod", ["--recursive", "+x", path]);
   if (process.exitCode != 0) {
     throw Exception("Failed to make executable: ${process.stderr}");
   }
 }
 
-createSymlinkOrJunction(String path, String target) async {
+Future<Uri> createSymlinkOrJunction(
+    Logger logger, String path, String target) async {
   try {
-    final link = await Link(path).create(target, recursive: true);
+    final link = await Link(target).create(path, recursive: true);
 
     return link.uri;
   } on FileSystemException catch (ex) {
+    logger.debug("Failed to create symlink: $ex");
     if (Platform.isWindows) {
-      log("Failed to create symlink, trying to create junction", error: ex);
+      logger.debug("We're on windows, we'll try to create a junction.");
 
       await _createJunction(path, target);
-      return Uri.directory(path);
+      return Uri.directory(target);
     } else {
+      logger.trace('Unable to create the junction, rethrowing...');
       rethrow;
     }
   }
@@ -80,17 +101,44 @@ Future<void> removeSymlink(String target) async {
   await link.delete(recursive: true);
 }
 
-Future<Directory> extractFile(String compressedFilePath, String target) async {
+Future<Directory> extractFile(String compressedFilePath, String version) async {
+  final uncompressedTarget = getNovenioDir();
+  final nestedUncompressedFilePath = path.basename(
+      compressedFilePath.replaceAll('.tar.gz', '').replaceAll('.zip', ''));
+
+  try {
+    await Directory(path.join(uncompressedTarget, version))
+        .delete(recursive: true);
+  } on PathNotFoundException {
+    // ignore
+  }
+
   if (Platform.isWindows) {
     final input = InputFileStream(compressedFilePath);
     final zip = ZipDecoder().decodeBuffer(input);
-    await extractArchiveToDiskAsync(zip, target);
+    await extractArchiveToDiskAsync(zip, uncompressedTarget);
   } else {
-    final input = InputStream(compressedFilePath);
+    final input = InputFileStream(compressedFilePath);
     final gzip = GZipDecoder().decodeBuffer(input);
     final archive = TarDecoder().decodeBytes(gzip);
 
-    await extractArchiveToDiskAsync(archive, target);
+    await extractArchiveToDiskAsync(archive, uncompressedTarget);
   }
-  return Directory(target);
+
+  final uncompressedDir =
+      path.join(uncompressedTarget, nestedUncompressedFilePath);
+  final normalizedUncompressedDir = path.join(uncompressedTarget, version);
+
+  await Directory(uncompressedDir).rename(normalizedUncompressedDir);
+  return Directory(uncompressedTarget);
+}
+
+Future<File> saveIndexToDisk(List<NodeVerItem> index) async {
+  final dir = getNovenioDir();
+  final content = index.map(nodeVersionToMap).toList();
+
+  await Directory(dir).create(recursive: true);
+
+  final indexFile = File(path.join(dir, 'index.json'));
+  return await indexFile.writeAsString(jsonEncode(content));
 }
