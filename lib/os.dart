@@ -103,6 +103,15 @@ Future<void> removeSymlink(String target) async {
   await link.delete(recursive: true);
 }
 
+Future<void> removeCompressedFile(File compressed) async {
+  if (Platform.isWindows) {
+    await Process.run(
+        "powershell.exe", ["-Command", "Remove-Item", compressed.path]);
+  } else {
+    await compressed.delete();
+  }
+}
+
 Future<void> _moveDirectory(source, target) async {
   if (Platform.isWindows) {
     await Process.run("powershell.exe",
